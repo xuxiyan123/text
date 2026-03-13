@@ -1,0 +1,204 @@
+C51 COMPILER V9.54   MAIN                                                                  03/13/2026 21:18:32 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\Ruanjian\Keil5 MDK\51\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.
+                    -\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include<REGX52.H>
+   2          #include <intrins.h>
+   3          #include<data.h>
+   4          
+   5          //注意 使用的是普中51开发板
+   6          
+   7          /*整体思路是 用计时器0来检测按键是否按下，10ms检测一次，按键1，2
+   8          开始时begin函数，LED1亮，按下按键1，开始计时，进入过程journey函数
+   9          过程使用计时器1，每10ms一次，当按键1按下时，停止计时，
+  10          9.97~9.99，10.10~10.30亮LED6
+  11          9.99~10.10亮LED6，7
+  12          按下按键2返回begin函数
+  13          */
+  14          
+  15          unsigned int count = 0;//按键检测的变量
+  16          unsigned int time = 0;//时间
+  17          unsigned char byte_0 = 0;//检测按键1是否按下
+  18          unsigned char byte_1 = 0;//检测按键2是否按下
+  19          
+  20          void start_0(void);//配置计时器0  改动time,按键的计时器
+  21          void start_1(void);//配置计时器1 
+  22          void botton(void);//开始按键检测
+  23          void begin(void);//开始界面，LED1亮
+  24          void journey(void);//过程与结束
+  25          
+  26          void main()
+  27          {
+  28   1        botton();
+  29   1        begin();//开始界面
+  30   1        
+  31   1        while(1);
+  32   1      } 
+  33          
+  34          
+  35          
+  36          //开始界面，LED1亮
+  37          void begin()
+  38          {
+  39   1        time = 0;
+  40   1        byte_0=0;
+  41   1        P2_0 = 0;
+  42   1        while (byte_0==0);//等待按键1按下
+  43   1        P2_0 = 1;
+  44   1        byte_0 = 0;
+  45   1        journey();//开始计时
+  46   1      }
+  47          
+  48          
+  49          //按键检测开始
+  50          void botton()
+  51          {
+  52   1        EA = 1;//打开中断总开关
+  53   1        ET0 = 1;//打开计时器0中断开关
+  54   1        ET1 = 1;//打开计时器1中断开关
+C51 COMPILER V9.54   MAIN                                                                  03/13/2026 21:18:32 PAGE 2   
+
+  55   1        start_0();
+  56   1      }
+  57          
+  58          //过程
+  59          void journey()
+  60          {
+  61   1        byte_0 = 0;//一系列的初始化，以防万一
+  62   1        P2_6 = 1;
+  63   1        P2_7 = 1;
+  64   1        start_1();//开启计时
+  65   1        while (byte_0==0)//刷新数码管，检测按键是否按下
+  66   1          {
+  67   2            show_num(1,time/1000);
+  68   2            show_num(2,(time%1000)/100);
+  69   2            show_num(3,(time%100)/10);
+  70   2            show_num(4,time%10);
+  71   2            show_num(2,10);
+  72   2          }
+  73   1        TR1 = 0;//关闭计时器1
+  74   1        byte_0 = 0;
+  75   1        byte_1 = 0;
+  76   1        if (time >=990 && time <= 1010)//成绩评估
+  77   1          {
+  78   2            P2_6 = 0;
+  79   2            P2_7 = 0;
+  80   2          }
+  81   1        else if ((time >=970 && time <990) || (time <= 1030  && time > 1010))
+  82   1          {
+  83   2            P2_6 = 0;
+  84   2          }
+  85   1        //结束，显示成绩
+  86   1        while (1)
+  87   1          {
+  88   2            show_num(1,time/1000);
+  89   2            show_num(2,(time%1000)/100);    
+  90   2            show_num(3,(time%100)/10);
+  91   2            show_num(4,time%10);
+  92   2            show_num(2,10);
+  93   2            if (byte_1 == 1)//检测按键2
+  94   2              {
+  95   3                byte_1 = 0;
+  96   3                P2_6 = 1;
+  97   3                P2_7 = 1;
+  98   3                begin();//从头开始
+  99   3              }
+ 100   2          }
+ 101   1      }
+ 102          
+ 103          //配置计时器0  改动time
+ 104          void start_0()
+ 105          {
+ 106   1        TMOD = 0x11;//配置gate c/T M1 M0
+ 107   1        TL0 = 55536 % 256;//自增寄存器低位
+ 108   1        TH0 = 55536 / 256;//自增寄存器高位
+ 109   1        TF0 = 0;//清除中断标志位
+ 110   1        TR0 = 1;//打开计时器0
+ 111   1      
+ 112   1      }
+ 113          //配置计时器1  改动time
+ 114          void start_1()
+ 115          {
+ 116   1        //TMOD = 0x11;//配置gate c/T M1 M0
+C51 COMPILER V9.54   MAIN                                                                  03/13/2026 21:18:32 PAGE 3   
+
+ 117   1        TL1 = 55536 % 256;//自增寄存器低位
+ 118   1        TH1 = 55536 / 256;//自增寄存器高位  
+ 119   1        TF1 = 0;//清除中断标志位
+ 120   1        TR1 = 1;//打开计时器0
+ 121   1      }
+ 122          //计时器0的中断函数
+ 123          void inter0(void) interrupt 1
+ 124          {
+ 125   1        if (P3_1 == 0)//当按键电平发生变化时，进入循环
+ 126   1          {
+ 127   2            while (P3_1==0)//跳过抖动时期
+ 128   2              {
+ 129   3                count++;
+ 130   3                if (count>10)//当探测出连续20次低电平时，认为按下
+ 131   3                  {
+ 132   4                    if (byte_0 <1)
+ 133   4                      {
+ 134   5                        byte_0++;
+ 135   5                      }
+ 136   4                    count = 0;//及时清零
+ 137   4                    break;
+ 138   4                  } 
+ 139   3              }
+ 140   2            while(P3_1==0);//等待电平重回高点
+ 141   2          }
+ 142   1          
+ 143   1          if (P3_0 == 0)//当按键电平发生变化时，进入循环
+ 144   1          {
+ 145   2            while (P3_0==0)//跳过抖动时期
+ 146   2              {
+ 147   3                count++;
+ 148   3                if (count>10)//当探测出连续20次低电平时，认为按下
+ 149   3                  {
+ 150   4                    if (byte_1 <1)
+ 151   4                      {
+ 152   5                        byte_1++;
+ 153   5                      }
+ 154   4                    count = 0;//及时清零
+ 155   4                    break;
+ 156   4                  } 
+ 157   3              }
+ 158   2            while(P3_0==0);//等待电平重回高点
+ 159   2          }
+ 160   1          start_0();//若要循环，使用此函数
+ 161   1      } 
+ 162          
+ 163          
+ 164          //计时器1的中断函数
+ 165          void inter1(void) interrupt 3
+ 166          {
+ 167   1        time++;
+ 168   1        start_1();
+ 169   1      }
+ 170          
+ 171          
+ 172          
+ 173          
+ 174          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    616    ----
+C51 COMPILER V9.54   MAIN                                                                  03/13/2026 21:18:32 PAGE 4   
+
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     28       1
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
